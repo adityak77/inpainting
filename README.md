@@ -45,6 +45,7 @@ For the `detectron2` environment, do
 ```
 cd detectron2
 conda create --name detectron2 python=3.7
+conda activate detectron2
 conda install pytorch=1.10.0 torchvision cudatoolkit=10.2 -c pytorch
 python -m pip install -e .
 pip install setuptools==59.5.0
