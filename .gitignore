@@ -1,4 +1,17 @@
 
+Copy-and-Paste-Networks-for-Deep-Video-Inpainting/weight/**
+
 EgoHOS/mmsegmentation/work_dirs/**
+EgoHOS/testvideos/**
+!EgoHOS/testvideos/testvideo1_short.mp4
+!EgoHOS/testvideos/testvideo2_short.mp4
+
+E2FGVI/release_model/**
+!E2FGVI/release_model/README.md
+
+detectron2/examples/**
+detectron2/output/model_final.pth
+detectron2/build/**
+
 stable-diffusion/archive/**
 stable-diffusion/models/**
