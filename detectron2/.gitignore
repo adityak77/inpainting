@@ -53,4 +53,5 @@ _darcs
 /snippet
 
 
-!robot_data/**
+!robot_data/train/**
+!robot_data/val/**

@@ -27,14 +27,10 @@ gdown 10wGdKSUOie0XmCr8SQ2A2FeDe-mfn5w3
 ```
 
 - Detectron2
+In order to get trained robot segmentation model, run (should take less than a minute)
 ```
 cd detectron2
-python -m pip install -e detectron2
-```
-
-In order to get trained robot segmentation model, run (should take only a few minutes)
-```
-conda activate detectron2
+conda activate detectron2 # see instructions below
 python train_segment_robot.py
 ```
 
@@ -48,7 +44,10 @@ For the `detectron2` environment, do
 
 ```
 cd detectron2
-python -m pip install -e detectron2
+conda create --name detectron2 python=3.7
+conda install pytorch=1.10.0 torchvision cudatoolkit=10.2 -c pytorch
+python -m pip install -e .
+pip install setuptools==59.5.0
 ```
 
 For the `e2fgvi` environment, we need a specific version of detectron2 because e2fgvi uses torch 1.5.
@@ -73,6 +72,7 @@ In order to make this work in the same script, I have a mega environment that is
 ```
 conda env create -f env_dvd_e2fgvi_detectron_egohos.yml
 conda activate dvd_e2fgvi_detectron_egohos
+python -m pip install detectron2==0.3 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/torch1.5/index.html
 ```
 
 ## Detectron2 inference
