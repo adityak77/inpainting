@@ -2,6 +2,44 @@
 
 Various segmentation and video inpainting approaches with the objective to use it for reward learning.
 
+## Model downloads
+
+- Copy and Paste Networks
+```
+cd Copy-and-Paste-Networks-for-Deep-Video-Inpainting/
+mkdir ./weight
+wget -O ./weight/weight.pth "https://www.dropbox.com/s/vbh12ay2ubrw3m9/weight.pth?dl=0"
+```
+
+- EgoHOS
+```
+pip install gdown
+cd EgoHOS/mmsegmentation
+gdown https://drive.google.com/uc?id=1LNMQ6TGf1QaCjMgTExPzl7lFFs-yZyqX
+unzip work_dirs.zip
+rm work_dirs.zip
+```
+
+- E2FGVI
+```
+cd E2FGVI/release_model
+gdown 10wGdKSUOie0XmCr8SQ2A2FeDe-mfn5w3
+```
+
+- Detectron2
+```
+cd detectron2
+python -m pip install -e detectron2
+```
+
+In order to get trained robot segmentation model, run (should take only a few minutes)
+```
+conda activate detectron2
+python train_segment_robot.py
+```
+
+- Stable Diffusion: get models from huggingface
+
 ## Setup
 
 Three main environments: `detectron2`, `open-mmlab` and `e2fgvi`.
