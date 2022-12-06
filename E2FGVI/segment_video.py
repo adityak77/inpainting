@@ -114,7 +114,7 @@ def get_segmented_frames(args, video_input, output=None, human_filter=False):
                 if cls_id == 0:
                     hmask = frames_info[i]['instances'].pred_masks[j]
                     struct_element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-                    hmask_processed = cv2.dilate(hmask.cpu().numpy().astype(np.uint8), struct_element, iterations=4).astype(np.bool)
+                    hmask_processed = cv2.dilate(hmask.cpu().numpy().astype(np.uint8), struct_element, iterations=2).astype(np.bool)
                     hmask_processed = torch.Tensor(hmask_processed).to(hmask.device)
                     human_masks.append(hmask_processed)
 

@@ -63,7 +63,7 @@ def segment_video(video_path, config_file, checkpoint_file, catchBadMasks=False)
         masks.append(seg_result.astype(np.uint8))
 
     masks = [(mask > 0).astype(np.uint8) for mask in masks]
-    dilate = lambda m : cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_CROSS, (5, 5)), iterations=5)
+    dilate = lambda m : cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_CROSS, (5, 5)), iterations=3)
     masks = [dilate(mask) for mask in masks]
 
     os.system('rm -rf ' + video_dir)
