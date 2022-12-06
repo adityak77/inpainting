@@ -73,6 +73,13 @@ In order to make this work in the same script, I have a mega environment that is
 conda env create -f env_dvd_e2fgvi_detectron_egohos.yml
 conda activate dvd_e2fgvi_detectron_egohos
 python -m pip install detectron2==0.3 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/torch1.5/index.html
+
+cd ~/rewards-from-human-videos/dvd/sim_envs
+pip install -e .
+
+cd ~/rewards-from-human-videos/metaworld
+pip install -e .
+
 ```
 
 ## Detectron2 inference
