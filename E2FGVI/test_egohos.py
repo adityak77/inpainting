@@ -15,6 +15,7 @@ from core.utils import to_tensors
 
 sys.path.append('/home/akannan2/inpainting/EgoHOS/mmsegmentation/')
 from segment_video_hands import segment_video
+from mmseg.apis import init_segmentor
 
 parser = argparse.ArgumentParser(description="E2FGVI with EgoHOS")
 parser.add_argument("-v", "--video", type=str, required=True)
@@ -114,7 +115,9 @@ def main_worker():
     print(
         f'Loading videos and masks from: {args.video} | INPUT mp4/gif format: {args.use_mp4}'
     )
-    frames, masks = segment_video(args.video, args.twohands_config_file, args.twohands_checkpoint_file)
+    segmentation_model = init_segmentor(args.twohands_config_file, args.twohands_checkpoint_file, device=device)
+    frames, masks = segment_video(args.video, segmentation_model)
+
     masks = [torch.tensor(mask, dtype=torch.float, device=device) for mask in masks]
     masks = [mask.expand(3, -1, -1) for mask in masks]
     frames = [Image.fromarray(frame, mode='RGB') for frame in frames]

@@ -35,7 +35,7 @@ def decode_video(path):
 
     return [f.to_rgb().to_ndarray() for f in reader.decode(video=0)]
 
-def segment_video(video_path, config_file, checkpoint_file, catchBadMasks=False):
+def segment_video(video_path, model, catchBadMasks=False):
     # extract video frames and save them into a directory
     print('Reading and extracting video frames......')
     reader = decode_video(video_path)
@@ -55,7 +55,6 @@ def segment_video(video_path, config_file, checkpoint_file, catchBadMasks=False)
         imsave(save_img_file, image)
 
     print('Segmenting video frames......')
-    model = init_segmentor(config_file, checkpoint_file, device=device)
 
     masks = []
     for file in tqdm(sorted(glob.glob(video_image_dir + '/*'))):
@@ -82,7 +81,8 @@ if __name__ == "__main__":
     args = get_args()
 
     # predict twohands
-    video, twohand_masks = segment_video(args.video, args.twohands_config_file, args.twohands_checkpoint_file)
+    model = init_segmentor(args.twohands_config_file, args.twohands_checkpoint_file, device=device)
+    video, twohand_masks = segment_video(args.video, model)
 
     # stitch prediction into a video
     print('stitch prediction into a video......')
