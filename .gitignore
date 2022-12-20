@@ -15,3 +15,6 @@ detectron2/build/**
 
 stable-diffusion/archive/**
 stable-diffusion/models/**
+stable-diffusion/outputs/**
+
+__pycache__/
