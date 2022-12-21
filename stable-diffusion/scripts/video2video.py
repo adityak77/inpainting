@@ -28,26 +28,16 @@ def decode_video(path):
 
     return [f.to_rgb().to_ndarray() for f in reader.decode(video=0)]
 
-def transform_image(opt, img):
+def transform_image(opt, img, model):
     seed_everything(opt.seed)
 
-    config = OmegaConf.load(f"{opt.config}")
-    model = load_model_from_config(config, f"{opt.ckpt}")
-
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-    # need half precision
-    # model = model.to(device)
-    model = model.to(device).half()
 
     if opt.plms:
         raise NotImplementedError("PLMS sampler not (yet) supported")
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
-
-    os.makedirs(opt.outdir, exist_ok=True)
-    outpath = opt.outdir
 
     batch_size = opt.n_samples
     if not opt.from_file:
@@ -60,13 +50,8 @@ def transform_image(opt, img):
         with open(opt.from_file, "r") as f:
             data = f.read().splitlines()
             data = list(chunk(data, batch_size))
-
-    sample_path = os.path.join(outpath, "samples")
-    os.makedirs(sample_path, exist_ok=True)
-    base_count = len(os.listdir(sample_path))
     
     # need half precision
-    # init_image = load_img(opt.init_img).to(device).half()
     init_image = img.to(device).half()
     init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
     init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
@@ -84,7 +69,7 @@ def transform_image(opt, img):
                 tic = time.time()
                 all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
-                    for prompts in tqdm(data, desc="data"):
+                    for prompts in data: 
                         uc = None
                         if opt.scale != 1.0:
                             uc = model.get_learned_conditioning(batch_size * [""])
@@ -101,12 +86,6 @@ def transform_image(opt, img):
                         x_samples = model.decode_first_stage(samples)
                         x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
-                        if not opt.skip_save:
-                            for x_sample in x_samples:
-                                x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                Image.fromarray(x_sample.astype(np.uint8)).save(
-                                    os.path.join(sample_path, f"{base_count:05}.png"))
-                                base_count += 1
                         all_samples.append(x_samples)
 
                 toc = time.time()
@@ -133,23 +112,11 @@ def main():
     )
 
     parser.add_argument(
-        "--outdir",
+        "--save_path",
         type=str,
         nargs="?",
-        help="dir to write results to",
-        default="outputs/img2img-samples"
-    )
-
-    parser.add_argument(
-        "--skip_grid",
-        action='store_true',
-        help="do not save a grid, only individual samples. Helpful when evaluating lots of samples",
-    )
-
-    parser.add_argument(
-        "--skip_save",
-        action='store_true',
-        help="do not save indiviual samples. For speed measurements.",
+        help="path to write results to",
+        default="outputs/video2video-samples/sample_results.gif"
     )
 
     parser.add_argument(
@@ -246,6 +213,12 @@ def main():
 
     opt = parser.parse_args()
 
+    config = OmegaConf.load(f"{opt.config}")
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+    model = load_model_from_config(config, f"{opt.ckpt}")
+    model = model.to(device).half()
+
     frames_numpy = decode_video(opt.video_path)
     height, width = frames_numpy[0].shape[0], frames_numpy[0].shape[1]
     frames_numpy = [cv2.resize(frame, dsize=(512, 512), interpolation=cv2.INTER_CUBIC)[None] for frame in frames_numpy]
@@ -253,12 +226,12 @@ def main():
     frames = [2. * (torch.from_numpy(frame) / 255.) - 1. for frame in frames_numpy]
 
     output_frames = []
-    for img in frames:
-        all_samples = transform_image(opt, img)
+    for img in tqdm(frames):
+        all_samples = transform_image(opt, img, model)
         output_frames.append(all_samples[0][0])
 
-    filename = os.path.basename(opt.video_path).split('.')[0] + '_results.gif'
-    outpath = os.path.join(opt.outdir, filename)
+    os.path.dirname(opt.save_path)
+    outpath = opt.save_path
 
     output_frames = [(frame.cpu().detach().numpy() * 255).astype(np.uint8) for frame in output_frames]
     output_frames = rearrange(output_frames, 'f c h w -> f h w c')
