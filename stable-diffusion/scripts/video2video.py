@@ -230,7 +230,7 @@ def main():
         all_samples = transform_image(opt, img, model)
         output_frames.append(all_samples[0][0])
 
-    os.path.dirname(opt.save_path)
+    os.makedirs(os.path.dirname(opt.save_path), exist_ok=True)
     outpath = opt.save_path
 
     output_frames = [(frame.cpu().detach().numpy() * 255).astype(np.uint8) for frame in output_frames]
