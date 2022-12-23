@@ -39,7 +39,7 @@ def decode_video(path):
 
     return [f.to_rgb().to_ndarray() for f in reader.decode(video=0)]
 
-def segment_video(video_path, twohands_model, cb_model, obj1_model, catchBadMasks=False):
+def segment_video_object(video_path, twohands_model, cb_model, obj1_model, catchBadMasks=False):
     # extract video frames and save them into a directory
     print('Reading and extracting video frames......')
     reader = decode_video(video_path)
@@ -102,11 +102,11 @@ def segment_video(video_path, twohands_model, cb_model, obj1_model, catchBadMask
 if __name__ == "__main__":
     args = get_args()
 
-    # predict twohands
+    # predict object masks
     twohands_model = init_segmentor(args.twohands_config_file, args.twohands_checkpoint_file, device=device)
     cb_model = init_segmentor(args.cb_config_file, args.cb_checkpoint_file, device=device)
     obj_model = init_segmentor(args.obj1_config_file, args.obj1_checkpoint_file, device=device)
-    video, obj_masks = segment_video(args.video, twohands_model, cb_model, obj_model)
+    video, obj_masks = segment_video_object(args.video, twohands_model, cb_model, obj_model)
 
     # stitch prediction into a video
     print('stitch prediction into a video......')
