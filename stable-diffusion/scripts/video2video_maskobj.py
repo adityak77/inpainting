@@ -267,7 +267,7 @@ def main():
 
     assert len(output_frames) == len(obj_masks)
     assert len(frames_numpy) == len(obj_masks)
-    masked_frames = [(1-obj_masks[i]) * output_frames[i] + obj_masks[i] * frames_numpy[i] for i in range(len(obj_masks))]
+    masked_frames = [(1-obj_masks[i]) * frames_numpy[i] + obj_masks[i] * output_frames[i] for i in range(len(obj_masks))]
     imageio.mimsave(outpath, masked_frames)
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
