@@ -4,6 +4,7 @@ from functools import partial
 import clip
 from einops import rearrange, repeat
 from transformers import CLIPTokenizer, CLIPTextModel
+from transformers import CLIPProcessor, CLIPVisionModel
 import kornia
 
 from ldm.modules.x_transformer import Encoder, TransformerWrapper  # TODO: can we directly rely on lucidrains code and simply add this as a reuirement? --> test
@@ -160,6 +161,36 @@ class FrozenCLIPEmbedder(AbstractEncoder):
 
     def encode(self, text):
         return self(text)
+
+
+class FrozenImageCLIPEmbedder(AbstractEncoder):
+    """Uses the CLIP transformer encoder for image (from Hugging Face)"""
+    def __init__(self, version="openai/clip-vit-large-patch14", device="cuda", max_length=77):
+        super().__init__()
+        self.processor = CLIPProcessor.from_pretrained(version)
+        self.transformer = CLIPVisionModel.from_pretrained(version)
+        self.device = device
+        self.max_length = max_length
+        self.freeze()
+
+    def freeze(self):
+        self.transformer = self.transformer.eval()
+        for param in self.parameters():
+            param.requires_grad = False
+
+    def forward(self, image):
+        device = image[0].device
+        image_cpu = [elem.cpu() for elem in image]
+        batch_encoding = self.processor(images=image_cpu, max_length=self.max_length, return_length=True,
+                                        return_overflowing_tokens=False, padding="max_length", return_tensors="pt").to(device)
+        tokens = batch_encoding["pixel_values"].to(self.device)
+        outputs = self.transformer(pixel_values=tokens)
+
+        z = outputs.last_hidden_state
+        return z
+
+    def encode(self, image):
+        return self(image)
 
 
 class FrozenCLIPTextEmbedder(nn.Module):
