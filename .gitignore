@@ -18,4 +18,4 @@ stable-diffusion/models/**
 stable-diffusion/outputs/**
 stable-diffusion/styles/
 
-__pycache__/
+diffusers/examples/textual_inversion/textual_inversion_sim_style/**
