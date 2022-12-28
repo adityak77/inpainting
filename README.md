@@ -157,3 +157,50 @@ STEPS=50 # default but can be reduced to 10 probably
 python scripts/inpaint_detectron.py --config-file ~/inpainting/detectron2/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml --video-input /path/to/video --outdir inpaint_examples --steps STEPS --opts MODEL.WEIGHTS detectron2://COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl
 ```
 
+## Textual Inversion training and inference
+
+For training, run the following. Running on one GPU with 256x256 resolution runs in around 30 min.
+```
+cd diffusers
+pip install -e .
+
+cd examples/textual_inversion
+pip install -r requirements.txt
+accelerate config
+
+export MODEL_NAME="CompVis/stable-diffusion-v1-4"
+export DATA_DIR=/home/akannan2/inpainting/stable-diffusion/robot_style
+export OUTPUT="textual_inversion_sim_style"
+
+accelerate launch textual_inversion.py \
+  --pretrained_model_name_or_path=$MODEL_NAME \
+  --train_data_dir=$DATA_DIR \
+  --learnable_property="style" \
+  --placeholder_token="<sim-style>" --initializer_token="animation" \
+  --resolution=256 \
+  --train_batch_size=1 \
+  --gradient_accumulation_steps=4 \
+  --max_train_steps=3000 \
+  --learning_rate=5.0e-04 --scale_lr \
+  --lr_scheduler="constant" \
+  --lr_warmup_steps=0 \
+  --output_dir=OUTPUT
+```
+
+This outputs the model in `OUTPUT`. To convert it to a .ckpt file, run
+```
+mkdir models/ldm/stable-diffusion-v1-text-inversion/
+
+python ~/inpainting/diffusers/scripts/convert_diffusers_to_original_stable_diffusion.py \
+--model_path textual_inversion_sim_style \
+--checkpoint_path ~/inpainting/stable-diffusion/models/ldm/stable-diffusion-v1-text-inversion/model.ckpt
+```
+
+For inference,
+```
+python scripts/img2img.py --prompt "stapler, in style of <sim-style>" \
+--init-img /path/to/img/ \
+--strength 0.5 --n_samples 4 \
+--ckpt models/ldm/stable-diffusion-v1-text-inversion/model.ckpt
+```
+
