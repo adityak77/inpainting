@@ -11,6 +11,7 @@ from itertools import islice
 from einops import rearrange, repeat
 from torchvision.utils import make_grid
 from torch import autocast
+from torch import nn
 from contextlib import nullcontext
 import time
 from pytorch_lightning import seed_everything
@@ -32,7 +33,13 @@ def load_model_from_config(config, ckpt, verbose=False):
         print(f"Global Step: {pl_sd['global_step']}")
     sd = pl_sd["state_dict"]
     model = instantiate_from_config(config.model)
-    m, u = model.load_state_dict(sd, strict=False)
+    try:
+        m, u = model.load_state_dict(sd, strict=False)
+    except: # case of text inversion
+        shape = model.cond_stage_model.transformer.text_model.embeddings.token_embedding.weight.size()
+        model.cond_stage_model.transformer.text_model.embeddings.token_embedding = nn.Embedding(shape[0]+1, shape[1])
+        m, u = model.load_state_dict(sd, strict=False)
+
     if len(m) > 0 and verbose:
         print("missing keys:")
         print(m)
@@ -50,7 +57,7 @@ def load_img(path):
     w, h = image.size
     print(f"loaded input image of size ({w}, {h}) from {path}")
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
-    image = image.resize((w, h), resample=PIL.Image.LANCZOS)
+    image = image.resize((512, 512), resample=PIL.Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
