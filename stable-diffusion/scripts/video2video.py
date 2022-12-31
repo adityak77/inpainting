@@ -19,6 +19,8 @@ from pytorch_lightning import seed_everything
 from scripts.img2img import chunk, load_model_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
 def decode_video(path):
     try: 
         reader = av.open(path)
@@ -28,36 +30,35 @@ def decode_video(path):
 
     return [f.to_rgb().to_ndarray() for f in reader.decode(video=0)]
 
-def transform_image(opt, img, model):
-    seed_everything(opt.seed)
-
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
+def get_conditioning(opt, model):
     if opt.plms:
         raise NotImplementedError("PLMS sampler not (yet) supported")
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
-
-    batch_size = opt.n_samples
-    if not opt.from_file:
-        prompt = opt.prompt
-        assert prompt is not None
-        data = [batch_size * [prompt]]
-
-    else:
-        print(f"reading prompts from {opt.from_file}")
-        with open(opt.from_file, "r") as f:
-            data = f.read().splitlines()
-            data = list(chunk(data, batch_size))
-    
-    # need half precision
-    init_image = img.to(device).half()
-    init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+        
+    assert opt.prompt is not None
+    prompts = [opt.prompt]
 
     sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
+    precision_scope = autocast if opt.precision == "autocast" else nullcontext
+    with torch.no_grad():
+        with precision_scope("cuda"):
+            with model.ema_scope():
+                if isinstance(prompts, tuple):
+                    prompts = list(prompts)
+                c = model.get_learned_conditioning(prompts)
 
+    return sampler, c
+
+def get_image_encoding(model, img):
+    # need half precision
+    init_image = img.to(device).half()
+    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+
+    return init_latent
+
+def decode(opt, model, sampler, c, init_latent):
     assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
     t_enc = int(opt.strength * opt.ddim_steps)
     print(f"target t_enc is {t_enc} steps")
@@ -66,32 +67,24 @@ def transform_image(opt, img, model):
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
-                tic = time.time()
                 all_samples = list()
-                for n in trange(opt.n_iter, desc="Sampling"):
-                    for prompts in data: 
-                        uc = None
-                        if opt.scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
+                uc = None
+                if opt.scale != 1.0:
+                    uc = model.get_learned_conditioning([""])
 
-                        # encode (scaled latent)
-                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                        # decode it
-                        samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
-                                                 unconditional_conditioning=uc,)
+                # encode (scaled latent)
+                z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc], device=device))
+                                
+                # decode it
+                samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
+                                            unconditional_conditioning=uc,)
 
-                        x_samples = model.decode_first_stage(samples)
-                        x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                x_samples = model.decode_first_stage(samples)
+                x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
-                        all_samples.append(x_samples)
-
-                toc = time.time()
+                all_samples.append(x_samples)
 
     return all_samples
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -144,12 +137,6 @@ def main():
         help="ddim eta (eta=0.0 corresponds to deterministic sampling",
     )
     parser.add_argument(
-        "--n_iter",
-        type=int,
-        default=1,
-        help="sample this often",
-    )
-    parser.add_argument(
         "--C",
         type=int,
         default=4,
@@ -160,12 +147,6 @@ def main():
         type=int,
         default=8,
         help="downsampling factor, most often 8 or 16",
-    )
-    parser.add_argument(
-        "--n_samples",
-        type=int,
-        default=1,
-        help="how many samples to produce for each given prompt. A.k.a batch size",
     )
     parser.add_argument(
         "--scale",
@@ -212,9 +193,9 @@ def main():
     )
 
     opt = parser.parse_args()
+    seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     model = load_model_from_config(config, f"{opt.ckpt}")
     model = model.to(device).half()
@@ -227,7 +208,9 @@ def main():
 
     output_frames = []
     for img in tqdm(frames):
-        all_samples = transform_image(opt, img, model)
+        sampler, c = get_conditioning(opt, model)
+        init_latent = get_image_encoding(model, img)
+        all_samples = decode(opt, model, sampler, c, init_latent)
         output_frames.append(all_samples[0][0])
 
     os.makedirs(os.path.dirname(opt.save_path), exist_ok=True)
