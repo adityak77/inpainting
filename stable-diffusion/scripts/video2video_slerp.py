@@ -90,6 +90,33 @@ def decode(opt, model, sampler, c, z_enc, t_enc):
 
     return all_samples
 
+# Code from Karpathy implementation: https://gist.github.com/karpathy/00103b0037c5aaea32fe1da1af553355
+def slerp(t, v0, v1, DOT_THRESHOLD=0.9995):
+    """ helper function to spherically interpolate two arrays v0 v1 """
+
+    if not isinstance(v0, np.ndarray):
+        inputs_are_torch = True
+        input_device = v0.device
+        v0 = v0.cpu().numpy()
+        v1 = v1.cpu().numpy()
+
+    dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
+    if np.abs(dot) > DOT_THRESHOLD:
+        v2 = (1 - t) * v0 + t * v1
+    else:
+        theta_0 = np.arccos(dot)
+        sin_theta_0 = np.sin(theta_0)
+        theta_t = theta_0 * t
+        sin_theta_t = np.sin(theta_t)
+        s0 = np.sin(theta_0 - theta_t) / sin_theta_0
+        s1 = sin_theta_t / sin_theta_0
+        v2 = s0 * v0 + s1 * v1
+
+    if inputs_are_torch:
+        v2 = torch.from_numpy(v2).to(input_device)
+
+    return v2
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -195,12 +222,19 @@ def main():
         choices=["full", "autocast"],
         default="autocast"
     )
+    parser.add_argument(
+        '--interpolation_method',
+        type=str,
+        help="Method to walk latent space",
+        choices=["slerp", "linear"],
+        default="slerp"
+    )
 
     opt = parser.parse_args()
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
-    interpolation_steps = 6
+    interpolation_steps = 7
 
     model = load_model_from_config(config, f"{opt.ckpt}")
     model = model.to(device).half()
@@ -220,10 +254,13 @@ def main():
     final_frames = []
     for i in range(len(downsampled_latents)-1):
         # do not decode last frame unless it is the last frame
-        steps = 3 * interpolation_steps - 1 if i < len(downsampled_latents) - 2 else 3 * interpolation_steps
+        steps = interpolation_steps - 1 if i < len(downsampled_latents) - 2 else interpolation_steps
         interpolated_latents = []
         for j in range(steps):
-            latent = downsampled_latents[i] + j * (downsampled_latents[i+1] - downsampled_latents[i]) / (steps - 1)
+            if opt.interpolation_method == 'linear':
+                latent = downsampled_latents[i] + j * (downsampled_latents[i+1] - downsampled_latents[i]) / (interpolation_steps - 1)
+            else:
+                latent = slerp(j / (interpolation_steps - 1), downsampled_latents[i], downsampled_latents[i+1])
             interpolated_latents.append(latent)
 
         for z in interpolated_latents:
