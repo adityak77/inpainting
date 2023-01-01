@@ -229,12 +229,17 @@ def main():
         choices=["slerp", "linear"],
         default="slerp"
     )
+    parser.add_argument(
+        '--downsample_video',
+        action='store_true',
+        help="downsample video frames and interpolate between frames"
+    )
 
     opt = parser.parse_args()
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
-    interpolation_steps = 7
+    interpolation_steps = 5
 
     model = load_model_from_config(config, f"{opt.ckpt}")
     model = model.to(device).half()
@@ -244,10 +249,12 @@ def main():
     frames_numpy = [cv2.resize(frame, dsize=(512, 512), interpolation=cv2.INTER_CUBIC)[None] for frame in frames_numpy]
     frames_numpy = rearrange(frames_numpy, 'f b h w c -> f b c h w')
     frames = [2. * (torch.from_numpy(frame) / 255.) - 1. for frame in frames_numpy]
+    if opt.downsample_video:
+        frames = frames[::interpolation_steps]
 
     downsampled_latents = []
     sampler, c = get_conditioning(opt, model)
-    for img in tqdm(frames[::interpolation_steps]):
+    for img in tqdm(frames):
         z_enc, t_enc = get_image_encoding(opt, model, sampler, img)
         downsampled_latents.append(z_enc)
     
