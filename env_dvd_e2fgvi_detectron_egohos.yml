@@ -153,7 +153,7 @@ dependencies:
     - jedi==0.18.1
     - matplotlib-inline==0.1.6
     - mmcls==0.24.1
-    - mmcv-full==1.6.0
+      #    - mmcv-full==1.6.0
     - model-index==0.1.11
     - mujoco-py==2.1.2.14
     - omegaconf==2.2.3

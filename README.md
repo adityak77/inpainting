@@ -23,7 +23,7 @@ rm work_dirs.zip
 - E2FGVI
 ```
 cd E2FGVI/release_model
-gdown 10wGdKSUOie0XmCr8SQ2A2FeDe-mfn5w3
+gdown 10wGdKSUOie0XmCr8SQ2A2FeDe-mfn5w3 # E2FGVI-HQ
 ```
 
 - Detectron2
