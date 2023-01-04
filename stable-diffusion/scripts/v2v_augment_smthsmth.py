@@ -249,6 +249,8 @@ def main():
         save_video_path = os.path.join(save_dir, f'{video_id}_augmented.webm')
         if os.path.exists(save_video_path):
             continue
+        if video_id not in video_objects:
+            continue
 
         # need to reseed in order to get random style augmentation prompts and strengths
         seed = random.randint(0, 100000)
@@ -273,7 +275,7 @@ def main():
             continue
         else:
             h, w = out_video[0].shape[:2]
-            writer = cv2.VideoWriter(save_video_path, cv2.VideoWriter_fourcc(*"VP90"), 24, (h, w))
+            writer = cv2.VideoWriter(save_video_path, cv2.VideoWriter_fourcc(*"VP90"), 24, (w, h))
             for frame in out_video:
                 writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
             writer.release()
