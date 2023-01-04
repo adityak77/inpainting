@@ -222,6 +222,7 @@ def main():
 
     inpainted_dir = os.path.join(opt.dir_path, '20bn-something-something-v2-inpainted-egohos-e2fgvi_hq')
     video_names = os.listdir(inpainted_dir)
+    random.shuffle(video_names)
 
     save_dir = os.path.join(opt.dir_path, '20bn-something-something-v2-inpainted-egohos-e2fgvi_hq', 'style_augmented')
     os.makedirs(save_dir, exist_ok=True)
@@ -249,6 +250,10 @@ def main():
         if os.path.exists(save_video_path):
             continue
 
+        # need to reseed in order to get random style augmentation prompts and strengths
+        seed = random.randint(0, 100000)
+        seed_everything(seed)
+
         frames_numpy = decode_video(video_path)
 
         if random.random() > prob_no_style: # generate style augmented video
@@ -257,7 +262,7 @@ def main():
             prompt = f'{prompt}, {style}'
 
             strength = round(random.uniform(0.35, 0.50), 2)
-            results_info[video_id] = {'prompt': prompt, 'seed': opt.seed, 'strength': strength}
+            results_info[video_id] = {'prompt': prompt, 'seed': seed, 'strength': strength}
 
             out_video = generate_video(opt, model, frames_numpy, prompt, strength, interpolation_steps)
         else: # do not generate style augmented video
