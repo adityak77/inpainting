@@ -236,12 +236,6 @@ def main():
     prob_no_style = 0.25
 
     logging_file = os.path.join(save_dir, 'augmentation_log.json')
-    if os.path.exists(logging_file):
-        with open(logging_file) as f:
-            results_info = json.load(f)
-    else:
-        results_info = {}
-
     for video_name in video_names:
         print('Processing video: ', video_name)
         video_path = os.path.join(inpainted_dir, video_name)
@@ -264,11 +258,11 @@ def main():
             prompt = f'{prompt}, {style}'
 
             strength = round(random.uniform(0.35, 0.50), 2)
-            results_info[video_id] = {'prompt': prompt, 'seed': seed, 'strength': strength}
+            results_dict = {'prompt': prompt, 'seed': seed, 'strength': strength}
 
             out_video = generate_video(opt, model, frames_numpy, prompt, strength, interpolation_steps)
         else: # do not generate style augmented video
-            results_info[video_id] = {'prompt': None, 'seed': None, 'strength': None}
+            results_dict = {'prompt': None, 'seed': None, 'strength': None}
             out_video = frames_numpy
 
         if os.path.exists(save_video_path):
@@ -280,6 +274,13 @@ def main():
                 writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
             writer.release()
 
+            if os.path.exists(logging_file):
+                with open(logging_file) as f:
+                    results_info = json.load(f)
+            else:
+                results_info = {}
+
+            results_info[video_id] = results_dict
             with open(logging_file, 'w') as f:
                 json.dump(results_info, f)
 
