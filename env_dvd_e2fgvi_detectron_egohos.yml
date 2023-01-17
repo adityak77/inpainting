@@ -155,7 +155,6 @@ dependencies:
     - commonmark==0.9.1
     - cython==0.29.32
     - decorator==5.1.1
-    - detectron2==0.6+cu111
     - fasteners==0.18
     - future==0.18.2
     - fvcore==0.1.5.post20220512
