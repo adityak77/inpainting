@@ -10,7 +10,8 @@ E2FGVI/release_model/**
 !E2FGVI/release_model/README.md
 
 detectron2/examples/**
-detectron2/output/model_final.pth
+detectron2/output/**
+detectron2/output_old/**
 detectron2/build/**
 
 stable-diffusion/archive/**

@@ -21,6 +21,8 @@ from detectron2.utils.visualizer import ColorMode
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.data import build_detection_test_loader
 
+data_dir = 'robot_data_shadow'
+
 def get_dicts(img_dir):
     anns = sorted([fname for fname in os.listdir(img_dir) if fname.endswith('.json')])
     imgs = sorted([fname for fname in os.listdir(img_dir) if fname.endswith('.png')])
@@ -38,7 +40,7 @@ def get_dicts(img_dir):
         record = {}
         
         record["file_name"] = img_full_path
-        record["image_id"] = idx
+        record["image_id"] = int(img_path.split('.')[0])
         record["height"] = ann['imageHeight']
         record["width"] = ann['imageWidth']
       
@@ -71,16 +73,16 @@ def get_dicts(img_dir):
     return dataset_dicts
 
 for d in ["train", "val"]:
-    DatasetCatalog.register("robot_" + d, lambda d=d: get_dicts("robot_data/" + d))
+    DatasetCatalog.register("robot_" + d, lambda d=d: get_dicts(f"{data_dir}/" + d))
     MetadataCatalog.get("robot_" + d).set(thing_classes=["robot"])
 robot_metadata = MetadataCatalog.get("robot_train")
 
-dataset_dicts = get_dicts("robot_data/train")
+dataset_dicts = get_dicts(f"{data_dir}/train")
 for d in random.sample(dataset_dicts, 1):
     img = cv2.imread(d["file_name"])
     visualizer = Visualizer(img[:, :, ::-1], metadata=robot_metadata, scale=0.5)
     out = visualizer.draw_dataset_dict(d)
-    cv2.imwrite('robot_data/sample_mask.png', out.get_image()[:, :, ::-1])
+    cv2.imwrite(f'{data_dir}/sample_mask.png', out.get_image()[:, :, ::-1])
 
 cfg = get_cfg()
 cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
@@ -90,7 +92,7 @@ cfg.DATALOADER.NUM_WORKERS = 2
 cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
 cfg.SOLVER.IMS_PER_BATCH = 2  # This is the real "batch size" commonly known to deep learning people
 cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-cfg.SOLVER.MAX_ITER = 300    # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+cfg.SOLVER.MAX_ITER = 1000    # 1000 iterations seems good enough for this dataset
 cfg.SOLVER.STEPS = []        # do not decay learning rate
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # The "RoIHead batch size". 128 is faster, and good enough for this toy dataset (default: 512)
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (robot). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -110,7 +112,7 @@ cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to t
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7   # set a custom testing threshold
 predictor = DefaultPredictor(cfg)
 
-dataset_dicts = get_dicts("robot_data/val")
+dataset_dicts = get_dicts(f"{data_dir}/val")
 for d in random.sample(dataset_dicts, 3):    
     im = cv2.imread(d["file_name"])
     outputs = predictor(im)  # format is documented at https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
@@ -120,7 +122,7 @@ for d in random.sample(dataset_dicts, 3):
                    instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels. This option is only available for segmentation models
     )
     out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-    cv2.imwrite('robot_data/inference.png', out.get_image()[:, :, ::-1])
+    cv2.imwrite(f'{data_dir}/inference.png', out.get_image()[:, :, ::-1])
 
 evaluator = COCOEvaluator("robot_val", output_dir="./output")
 val_loader = build_detection_test_loader(cfg, "robot_val")
