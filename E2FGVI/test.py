@@ -241,7 +241,7 @@ def main_worker():
                              default_fps, size)
     for f in range(video_length):
         comp = comp_frames[f].astype(np.uint8)
-        writer.write(cv2.cvtColor(comp, cv2.COLOR_BGR2RGB))
+        writer.write(cv2.cvtColor(comp, cv2.COLOR_RGB2BGR))
     writer.release()
     print(f'Finish test! The result video is saved in: {save_path}.')
 
