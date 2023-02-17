@@ -208,4 +208,7 @@ dependencies:
     - wcwidth==0.2.5
     - yacs==0.1.8
     - yapf==0.32.0
+    - backoff
+    - mlflow
+    - google.cloud.storage
 prefix: /home/akannan2/anaconda3/envs/dvd_e2fgvi_detectron_egohos
