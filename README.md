@@ -51,11 +51,11 @@ python -m pip install -e .
 pip install setuptools==59.5.0
 ```
 
-For the `e2fgvi` environment, we need a specific version of detectron2 because e2fgvi uses torch 1.5.
+For the `e2fgvi` environment, we need a specific version of detectron2.
 ```
 cd E2FGVI
 conda env create -f e2fgvi_detectron2.yml 
-python -m pip install detectron2==0.3 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/torch1.5/index.html
+python -m pip install detectron2==0.6 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.10/index.html
 ```
 
 The `open-mmlab` environment is made for doing experiments with `EgoHOS` instead of `detectron`. Activate it as follows:
@@ -73,7 +73,7 @@ In order to make this work in the same script, I have a mega environment that is
 ```
 conda env create -f env_dvd_e2fgvi_detectron_egohos.yml
 conda activate dvd_e2fgvi_detectron_egohos
-python -m pip install detectron2==0.3 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/torch1.5/index.html
+python -m pip install detectron2==0.6 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.10/index.html
 
 cd ~/rewards-from-human-videos/dvd/sim_envs
 pip install -e .
