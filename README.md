@@ -1,6 +1,6 @@
 # Inpainting
 
-Various segmentation and video inpainting approaches with the objective to use it for reward learning.
+Various segmentation and video inpainting approaches with the objective of reward learning.
 
 ## Model downloads
 
